@@ -4,9 +4,8 @@ from loguru import logger
 import requests
 import os
 
-from langchain.chains import ConversationalRetrievalChain, LLMChain, StuffDocumentsChain
+from langchain.chains import ConversationalRetrievalChain
 from langchain.chat_models import ChatOpenAI
-from langchain.prompts import PromptTemplate
 
 from langchain.document_loaders import PyMuPDFLoader, Docx2txtLoader, UnstructuredPowerPointLoader
 
@@ -62,22 +61,13 @@ def get_vectorstore(text_chunks):
     return vectordb
 
 def get_conversation_chain(vetorestore, openai_api_key):
-    prompt_template = (
-        "You are an assistant for question-answering tasks.\n"
-        "Use the following pieces of retrieved context to answer the question.\n"
-        "If you don't know the answer, just say that you don't know.\n"
-        "Answer in Korean."
-    )
-    
-    prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     llm = ChatOpenAI(openai_api_key=openai_api_key, model_name='gpt-4o', temperature=0)
-    llm_chain = LLMChain(llm=llm, prompt=prompt)
-    combine_docs_chain = StuffDocumentsChain(llm_chain=llm_chain, document_variable_name="context")
-    
-    conversation_chain = ConversationalRetrievalChain(
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        chain_type="stuff",
         retriever=vetorestore.as_retriever(search_type='mmr', vervose=True),
-        combine_docs_chain=combine_docs_chain,
         memory=ConversationBufferMemory(memory_key='chat_history', return_messages=True, output_key='answer'),
+        get_chat_history=lambda h: h,
         return_source_documents=True,
         verbose=True
     )
