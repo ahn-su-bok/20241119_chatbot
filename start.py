@@ -6,12 +6,11 @@ import os
 
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chat_models import ChatOpenAI
+from langchain.embeddings import OpenAIEmbeddings
 
 from langchain.document_loaders import PyMuPDFLoader, Docx2txtLoader, UnstructuredPowerPointLoader
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import HuggingFaceEmbeddings
-
 from langchain.memory import ConversationBufferMemory
 from langchain.vectorstores import FAISS
 from langchain.callbacks import get_openai_callback
@@ -51,21 +50,17 @@ def get_text_chunks(text):
     chunks = text_splitter.split_documents(text)
     return chunks
 
-def get_vectorstore(text_chunks):
-    embeddings = HuggingFaceEmbeddings(
-        model_name="jhgan/ko-sroberta-multitask",
-        model_kwargs={'device': 'cpu'},
-        encode_kwargs={'normalize_embeddings': True}
-    )
-    vectordb = FAISS.from_documents(text_chunks, embeddings)
-    return vectordb
+def get_vectorstore(_text_chunks):
+    embeddings = OpenAIEmbeddings()
+    vector_store = FAISS.from_documents(_text_chunks, embedding=embeddings)  # _text_chunks를 올바르게 전달
+    return vector_store
 
-def get_conversation_chain(vetorestore, openai_api_key):
-    llm = ChatOpenAI(openai_api_key=openai_api_key, model_name='gpt-4o', temperature=0)
+def get_conversation_chain(vectorstore, openai_api_key):  # vetorestore 오타 수정
+    llm = ChatOpenAI(openai_api_key=openai_api_key, model_name='gpt-3.5-turbo', temperature=0)
     conversation_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         chain_type="stuff",
-        retriever=vetorestore.as_retriever(search_type='mmr', vervose=True),
+        retriever=vectorstore.as_retriever(search_type='mmr', verbose=True),  # vervose 오타 수정
         memory=ConversationBufferMemory(memory_key='chat_history', return_messages=True, output_key='answer'),
         get_chat_history=lambda h: h,
         return_source_documents=True,
@@ -107,12 +102,12 @@ def main():
         # GitHub에서 PDF 파일 로드
         files_text = get_text_from_github(file_url)
         text_chunks = get_text_chunks(files_text)
-        vetorestore = get_vectorstore(text_chunks)
-        if vetorestore is None:
+        vectorstore = get_vectorstore(text_chunks)
+        if vectorstore is None:
             st.error("Failed to create vector store. Please check the input text chunks and embeddings.")
             return
 
-        st.session_state.conversation = get_conversation_chain(vetorestore, openai_api_key) 
+        st.session_state.conversation = get_conversation_chain(vectorstore, openai_api_key) 
         st.session_state.processComplete = True
 
     if 'messages' not in st.session_state:
@@ -158,3 +153,4 @@ def tiktoken_len(text):
 
 if __name__ == '__main__':
     main()
+
