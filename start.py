@@ -50,8 +50,8 @@ def get_text_chunks(text):
     chunks = text_splitter.split_documents(text)
     return chunks
 
-def get_vectorstore(_text_chunks):
-    embeddings = OpenAIEmbeddings()
+def get_vectorstore(_text_chunks, openai_api_key):
+    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
     vector_store = FAISS.from_documents(_text_chunks, embedding=embeddings)
     return vector_store
 
@@ -101,7 +101,7 @@ def main():
         # GitHub에서 PDF 파일 로드
         files_text = get_text_from_github(file_url)
         text_chunks = get_text_chunks(files_text)
-        vectorstore = get_vectorstore(text_chunks)
+        vectorstore = get_vectorstore(text_chunks, openai_api_key)
         if vectorstore is None:
             st.error("Failed to create vector store. Please check the input text chunks and embeddings.")
             return
@@ -152,4 +152,5 @@ def tiktoken_len(text):
 
 if __name__ == '__main__':
     main()
+
 
