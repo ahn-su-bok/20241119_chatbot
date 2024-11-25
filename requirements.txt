@@ -5,4 +5,4 @@ requests
 pymupdf
 langchain
 faiss-cpu
-langchain commuity
+langchain community
