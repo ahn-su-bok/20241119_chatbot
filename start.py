@@ -8,7 +8,7 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
 
-from langchain.document_loaders import PyMuPDFLoader, Docx2txtLoader, UnstructuredPowerPointLoader
+from langchain.document_loaders import PyMuPDFLoader  # PDF 관련 로더만 남김
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.memory import ConversationBufferMemory
@@ -37,14 +37,14 @@ def get_text_from_github(file_url):
     if not os.path.exists(local_path):
         raise ValueError(f"File path {local_path} is not a valid file or url")
 
-    loader = PyMuPDFLoader(local_path)
+    loader = PyMuPDFLoader(local_path)  # PDF 로더만 사용
     documents = loader.load_and_split()
     return documents
 
 def get_text_chunks(text):
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=900,
-        chunk_overlap=100,
+        chunk_size=800,
+        chunk_overlap=200,
         length_function=tiktoken_len
     )
     chunks = text_splitter.split_documents(text)
@@ -52,15 +52,15 @@ def get_text_chunks(text):
 
 def get_vectorstore(_text_chunks):
     embeddings = OpenAIEmbeddings()
-    vector_store = FAISS.from_documents(_text_chunks, embedding=embeddings)  # _text_chunks를 올바르게 전달
+    vector_store = FAISS.from_documents(_text_chunks, embedding=embeddings)
     return vector_store
 
-def get_conversation_chain(vectorstore, openai_api_key):  # vetorestore 오타 수정
+def get_conversation_chain(vectorstore, openai_api_key):
     llm = ChatOpenAI(openai_api_key=openai_api_key, model_name='gpt-3.5-turbo', temperature=0)
     conversation_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         chain_type="stuff",
-        retriever=vectorstore.as_retriever(search_type='mmr', verbose=True),  # vervose 오타 수정
+        retriever=vectorstore.as_retriever(search_type='mmr', verbose=True),
         memory=ConversationBufferMemory(memory_key='chat_history', return_messages=True, output_key='answer'),
         get_chat_history=lambda h: h,
         return_source_documents=True,
@@ -86,7 +86,6 @@ def main():
             "공사사규.pdf": "https://github.com/ahn-su-bok/241113_chatbot/raw/main/김포도시관리공사사규_2024.06.27.pdf",
             "공사지침.pdf": "https://github.com/ahn-su-bok/241113_chatbot/raw/main/김포도시관리공사 지침_2024.10.18..pdf",
             "예산편성기준.pdf": "https://github.com/ahn-su-bok/241113_chatbot/raw/main/2025년도 지방공기업 예산편성기준.pdf",
-
         }
         selected_file = st.selectbox("Choose a file", list(file_options.keys()))
         openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
@@ -107,7 +106,7 @@ def main():
             st.error("Failed to create vector store. Please check the input text chunks and embeddings.")
             return
 
-        st.session_state.conversation = get_conversation_chain(vectorstore, openai_api_key) 
+        st.session_state.conversation = get_conversation_chain(vectorstore, openai_api_key)
         st.session_state.processComplete = True
 
     if 'messages' not in st.session_state:
