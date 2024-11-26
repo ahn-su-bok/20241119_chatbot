@@ -91,6 +91,16 @@ def main():
         openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
         process = st.button("Process")
 
+        st.header("파일 및 API 선택 후 PORCESS 버튼을 눌러주세요. ")
+        st.subheader("공사 챗봇 구성")
+        st.text("1. 사규 : 기획, 총무, 인사, 재무, 감사")
+        st.text("2. 지침")
+        st.text("1) 감사실")
+        st.caption("청렴행동수칙, 청렴시민감사관, 업무추진비 집행, 취업제한 및 업무취급제한 사무, 비위면직자등의 취업제한사무, 인권경영 이행, 개인정보보호, 에너지절약추진위원회, 위험성평가, 재해발생 시 보고 및 대응")
+        st.text("2) 기획조정실")
+        st.caption("예산운용, 시민참여예산, ESG 경영자문위원회, 위원회 심의수당 지급, 고객서비스헌장, 직장 내 괴롭힘 예방 및 대응, 공무국외여행, 성희롱/성폭력 예방, 선택적복지제도, 복무관리 및 운영, 물품 정수관리, 정보공개 심의회, 규제입증위원회, 휴직자 복무관리, 임금피크제")
+        st.text("3. 2025년 예산편성기준")
+  
     if process:
         if not openai_api_key:
             st.info("Please add your OpenAI API key to continue.")
@@ -112,6 +122,15 @@ def main():
     if 'messages' not in st.session_state:
         st.session_state['messages'] = [{"role": "assistant", 
                                          "content": "안녕하세요! 주어진 문서에 대해 궁금하신 것이 있으면 언제든 물어봐주세요!"}]
+
+   # 대화 데이터 초기화를 위한 버튼 추가
+    if st.button("대화 데이터 초기화"):
+        st.session_state.conversation = None
+        st.session_state.chat_history = None
+        st.session_state.processComplete = None
+        st.session_state.messages = [{"role": "assistant", "content": "대화 데이터가 초기화되었습니다. 새로 시작하시려면 질문을 입력해주세요!"}]
+        st.success("대화 데이터가 초기화되었습니다.")
+
 
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
