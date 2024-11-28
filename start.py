@@ -1,3 +1,4 @@
+# 필요한 라이브러리 임포트
 import streamlit as st
 import tiktoken
 from loguru import logger
@@ -15,7 +16,10 @@ from langchain.memory import ConversationBufferMemory
 from langchain.vectorstores import FAISS
 from langchain.callbacks import get_openai_callback
 from langchain.memory import StreamlitChatMessageHistory
+from langchain_core.output_parsers import StrOutputParser # 출력결과 처리 및 필요정보 추출
+from langchain_core.prompts import PromptTemplate  # PromptTemplate 추가
 
+# GitHub에서 파일을 다운로드하는 함수 정의
 def download_file_from_github(url, output_path):
     response = requests.get(url)
     if response.status_code == 200:
@@ -27,6 +31,7 @@ def download_file_from_github(url, output_path):
         logger.error(f"Failed to download file from {url}. Status code: {response.status_code}")
         return False
 
+# GitHub에서 파일을 읽어와 텍스트 추출하는 함수 정의
 def get_text_from_github(file_url):
     local_path = "downloaded_file.pdf"
     success = download_file_from_github(file_url, local_path)
@@ -39,24 +44,63 @@ def get_text_from_github(file_url):
 
     loader = PyMuPDFLoader(local_path)  # PDF 로더만 사용
     documents = loader.load_and_split()
+    
+    # 페이지 번호 추가
+    for i, doc in enumerate(documents):
+        doc.metadata['page'] = i + 1
+
+    
     return documents
 
+# 텍스트를 청크 단위로 나누는 함수 정의
 def get_text_chunks(text):
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=800,
+        chunk_size=900,
         chunk_overlap=200,
         length_function=tiktoken_len
     )
     chunks = text_splitter.split_documents(text)
     return chunks
 
+# 벡터 스토어 생성 함수 정의 및 cache_embeddings 함수 통합
 def get_vectorstore(_text_chunks, openai_api_key):
-    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     vector_store = FAISS.from_documents(_text_chunks, embedding=embeddings)
+
+    # 추가된 임베딩 캐시 함수 정의
+    def compute_embeddings(data, model):
+        embeddings = model.encode(data)
+        return embeddings
+
+    embeddings_cache = {}
+
+    def cache_embeddings(data, model):
+        for item in data:
+            if item not in embeddings_cache:
+                embeddings_cache[item] = compute_embeddings([item], model)
+        return embeddings_cache
+
     return vector_store
 
+# 대화 체인 생성 함수 정의
 def get_conversation_chain(vectorstore, openai_api_key):
-    llm = ChatOpenAI(openai_api_key=openai_api_key, model_name='gpt-3.5-turbo', temperature=0)
+    llm = ChatOpenAI(openai_api_key=openai_api_key, model_name='gpt-4o', temperature=0)
+
+    # PromptTemplate 생성
+    template = """
+    You are an assistant for question-answering tasks. 
+    Use the following pieces of retrieved context to answer the question. 
+    If you don't know the answer, just say that you don't know.
+    You must include 'page' number in your answer. 
+    Answer in Korean.
+
+    주어진 문서에서 다음 질문에 대한 답을 찾아주세요:
+    {question}
+    """
+    prompt = PromptTemplate(input_variables=["question"], template=template)
+ # stoutputparser 생성
+    output_parser=StrOutputParser  
+
     conversation_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         chain_type="stuff",
@@ -68,10 +112,13 @@ def get_conversation_chain(vectorstore, openai_api_key):
     )
     return conversation_chain
 
+
+# 메인 함수 정의 및 Streamlit 설정
 def main():
     st.set_page_config(page_title="DirChat", page_icon=":books:")
     st.title("_김포도시관리공사 :red[QA Chat]_ :books:")
 
+    # 초기 상태 설정
     if "conversation" not in st.session_state:
         st.session_state.conversation = None
 
@@ -81,6 +128,7 @@ def main():
     if "processComplete" not in st.session_state:
         st.session_state.processComplete = None
 
+    # 사이드바 구성
     with st.sidebar:
         file_options = {
             "공사사규.pdf": "https://github.com/ahn-su-bok/241113_chatbot/raw/main/김포도시관리공사사규_2024.06.27.pdf",
@@ -91,7 +139,7 @@ def main():
         openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
         process = st.button("Process")
 
-        st.header("파일 및 API 선택 후 PORCESS 버튼을 눌러주세요. ")
+        st.header("파일 및 API 선택 후 PORCESS 버튼을 눌러주세요.")
         st.subheader("공사 챗봇 구성")
         st.text("1. 사규 : 기획, 총무, 인사, 재무, 감사")
         st.text("2. 지침")
@@ -100,7 +148,8 @@ def main():
         st.text("2) 기획조정실")
         st.caption("예산운용, 시민참여예산, ESG 경영자문위원회, 위원회 심의수당 지급, 고객서비스헌장, 직장 내 괴롭힘 예방 및 대응, 공무국외여행, 성희롱/성폭력 예방, 선택적복지제도, 복무관리 및 운영, 물품 정수관리, 정보공개 심의회, 규제입증위원회, 휴직자 복무관리, 임금피크제")
         st.text("3. 2025년 예산편성기준")
-  
+
+    # 파일 처리 및 벡터 스토어 생성
     if process:
         if not openai_api_key:
             st.info("Please add your OpenAI API key to continue.")
@@ -119,11 +168,11 @@ def main():
         st.session_state.conversation = get_conversation_chain(vectorstore, openai_api_key)
         st.session_state.processComplete = True
 
+    # 초기 메시지 설정 및 대화 데이터 초기화 버튼 추가
     if 'messages' not in st.session_state:
         st.session_state['messages'] = [{"role": "assistant", 
                                          "content": "안녕하세요! 주어진 문서에 대해 궁금하신 것이 있으면 언제든 물어봐주세요!"}]
 
-   # 대화 데이터 초기화를 위한 버튼 추가
     if st.button("대화 데이터 초기화"):
         st.session_state.conversation = None
         st.session_state.chat_history = None
@@ -131,7 +180,7 @@ def main():
         st.session_state.messages = [{"role": "assistant", "content": "대화 데이터가 초기화되었습니다. 새로 시작하시려면 질문을 입력해주세요!"}]
         st.success("대화 데이터가 초기화되었습니다.")
 
-
+    # 사용자 메시지 표시 및 입력 처리
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
@@ -159,17 +208,20 @@ def main():
 
                     st.markdown(response)
                     with st.expander("참고 문서 확인"):
-                        for doc in source_documents:
-                            st.markdown(doc.metadata['source'], help=doc.page_content)
+                      for doc in source_documents:
+                        page_number = doc.metadata.get('page', '페이지 정보 없음')
+                        st.markdown(f"페이지 번호: {page_number}\n출처: {doc.metadata['source']}", help=doc.page_content)
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
-
+# 텍스트의 토큰 수를 계산하는 함수 정의
 def tiktoken_len(text):
     tokenizer = tiktoken.get_encoding("cl100k_base")
     tokens = tokenizer.encode(text)
     return len(tokens)
 
+# main 함수 실행
 if __name__ == '__main__':
     main()
+
 
 
