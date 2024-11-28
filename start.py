@@ -64,7 +64,7 @@ def get_text_chunks(text):
 
 # 벡터 스토어 생성 함수 정의 및 cache_embeddings 함수 통합
 def get_vectorstore(_text_chunks, openai_api_key):
-    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
     vector_store = FAISS.from_documents(_text_chunks, embedding=embeddings)
 
     # 추가된 임베딩 캐시 함수 정의
