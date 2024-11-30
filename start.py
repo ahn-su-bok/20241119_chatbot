@@ -131,8 +131,8 @@ def main():
     # 사이드바 구성
     with st.sidebar:
         file_options = {
-            "공사사규.pdf": "https://github.com/ahn-su-bok/241113_chatbot/raw/main/김포도시관리공사사규_2024.06.27.pdf",
-            "공사지침.pdf": "https://github.com/ahn-su-bok/241113_chatbot/raw/main/김포도시관리공사 지침_2024.10.18..pdf",
+            "공사사규.pdf": "https://github.com/ahn-su-bok/241113_chatbot/raw/main/김포도시관리공사사규_2024.6.27(압축).pdf",
+            "공사지침.pdf": "https://github.com/ahn-su-bok/241113_chatbot/raw/main/김포도시관리공사 지침_10.18(압축).pdf",
             "예산편성기준.pdf": "https://github.com/ahn-su-bok/241113_chatbot/raw/main/2025년도 지방공기업 예산편성기준.pdf",
         }
         selected_file = st.selectbox("Choose a file", list(file_options.keys()))
@@ -222,6 +222,5 @@ def tiktoken_len(text):
 # main 함수 실행
 if __name__ == '__main__':
     main()
-
 
 
