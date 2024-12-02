@@ -127,6 +127,24 @@ def main():
 
     if "processComplete" not in st.session_state:
         st.session_state.processComplete = None
+        
+    # 환경 변수에서 API 키 가져오기 
+    openai_api_key = os.getenv('OPENAI_API_KEY') 
+
+    # 비밀번호 입력
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+
+    if not st.session_state.authenticated:
+        password = st.text_input("Enter password", type="password")
+        if st.button("Login"):
+            if password == 'guc1234':
+                st.session_state.authenticated = True
+                st.success("Password correct. You are now authenticated.")
+            else:
+                st.error("Incorrect password. Please try again.")
+        return
+       
 
     # 사이드바 구성
     with st.sidebar:
@@ -136,7 +154,6 @@ def main():
             "예산편성기준.pdf": "https://github.com/ahn-su-bok/241113_chatbot/raw/main/2025년도 지방공기업 예산편성기준.pdf",
         }
         selected_file = st.selectbox("Choose a file", list(file_options.keys()))
-        openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
         process = st.button("Process")
 
         st.header("파일 및 API 선택 후 PORCESS 버튼을 눌러주세요.")
@@ -222,5 +239,4 @@ def tiktoken_len(text):
 # main 함수 실행
 if __name__ == '__main__':
     main()
-
 
