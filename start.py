@@ -34,7 +34,7 @@ def download_file_from_github(url, output_path):
 # GitHub에서 파일을 읽어와 텍스트 추출하는 함수 정의
 def get_text_from_github(file_url):
     local_path = "downloaded_file.pdf"
-    success = download_file_from_github(file_url, local_path)
+    success = download_file_from_github(file_url, local_path, encoding='utf-8')
     
     if not success:
         raise ValueError(f"Failed to download file from {file_url}")
