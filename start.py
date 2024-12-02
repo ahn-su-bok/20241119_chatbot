@@ -82,7 +82,7 @@ def get_vectorstore(_text_chunks, openai_api_key):
 
 # 대화 체인 생성 함수 정의
 def get_conversation_chain(vectorstore, openai_api_key):
-    llm = ChatOpenAI(openai_api_key=openai_api_key, model_name='gpt-3.5-turbo', temperature=0)
+    llm = ChatOpenAI(openai_api_key=openai_api_key, model_name='gpt-4o', temperature=0)
 
     # PromptTemplate 생성
     template = """
@@ -130,7 +130,7 @@ def main():
         st.session_state.processComplete = None
 
     # 환경 변수에서 API 키 가져오기 
-    openai_api_key = os.getenv('OPENAI_API_KEY', '').encode('utf-8').decode('utf-8') 
+    openai_api_key = os.getenv('OPENAI_API_KEY')
 
     # 비밀번호 입력
     if 'authenticated' not in st.session_state:
