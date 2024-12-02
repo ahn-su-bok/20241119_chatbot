@@ -1,4 +1,3 @@
-# 필요한 라이브러리 임포트
 import streamlit as st
 import tiktoken
 from loguru import logger
@@ -34,7 +33,7 @@ def download_file_from_github(url, output_path):
 # GitHub에서 파일을 읽어와 텍스트 추출하는 함수 정의
 def get_text_from_github(file_url):
     local_path = "downloaded_file.pdf"
-    success = download_file_from_github(file_url, local_path, encoding='utf-8')
+    success = download_file_from_github(file_url, local_path)
     
     if not success:
         raise ValueError(f"Failed to download file from {file_url}")
@@ -44,7 +43,7 @@ def get_text_from_github(file_url):
 
     loader = PyMuPDFLoader(local_path)  # PDF 로더만 사용
     documents = loader.load_and_split()
-    
+
     # 페이지 번호 추가
     for i, doc in enumerate(documents):
         doc.metadata['page'] = i + 1
@@ -198,7 +197,7 @@ def main():
         st.session_state.messages = [{"role": "assistant", "content": "대화 데이터가 초기화되었습니다. 새로 시작하시려면 질문을 입력해주세요!"}]
         st.success("대화 데이터가 초기화되었습니다.")
 
-     # 사용자 메시지 표시 및 입력 처리
+    # 사용자 메시지 표시 및 입력 처리
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
@@ -241,4 +240,5 @@ def tiktoken_len(text):
 # main 함수 실행
 if __name__ == '__main__':
     main()
+
    
