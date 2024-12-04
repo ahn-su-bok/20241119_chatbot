@@ -7,7 +7,7 @@ import os
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
-
+from langchain.embeddings import CacheBackedEmbeddings, OpenAIEmbeddings
 from langchain.document_loaders import PyMuPDFLoader  # PDF 관련 로더만 남김
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -60,24 +60,33 @@ def get_text_chunks(text):
     chunks = text_splitter.split_documents(text)
     return chunks
 
+# 간단한 메모리 기반 캐시 저장소 구현
+class SimpleMemoryStore:
+    def __init__(self):
+        self.store = {}
+
+    def mget(self, keys):
+        return [self.store.get(key) for key in keys]
+    
+    def mset(self, items):
+        for key, value in items:
+            self.store[key] = value
+
+
 # 벡터 스토어 생성 함수 정의 및 cache_embeddings 함수 통합
 def get_vectorstore(_text_chunks, openai_api_key):
-    embeddings = OpenAIEmbeddings(model="text-embedding-ada-002", openai_api_key=openai_api_key)
-    vector_store = FAISS.from_documents(_text_chunks, embedding=embeddings)
-
-    # 추가된 임베딩 캐시 함수 정의
-    def compute_embeddings(data, model):
-        embeddings = model.encode(data)
-        return embeddings
-
-    embeddings_cache = {}
-
-    def cache_embeddings(data, model):
-        for item in data:
-            if item not in embeddings_cache:
-                embeddings_cache[item] = compute_embeddings([item], model)
-        return embeddings_cache
-
+    # 기본 OpenAI 임베딩 초기화
+    base_embeddings = OpenAIEmbeddings(model="text-embedding-ada-002", openai_api_key=openai_api_key)
+    
+    # 메모리 기반 저장소 인스턴스 생성
+    memory_cache = SimpleMemoryStore()
+    
+    # CacheBackedEmbeddings로 감싸기
+    cached_embeddings = CacheBackedEmbeddings(base_embeddings,document_embedding_store=memory_cache)
+    
+    # 벡터 스토어에 캐시된 임베딩 사용
+    vector_store = FAISS.from_documents(_text_chunks, embedding=cached_embeddings)
+    
     return vector_store
 
 # 대화 체인 생성 함수 정의
